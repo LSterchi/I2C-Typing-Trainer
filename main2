@@ -84,17 +84,18 @@ static void map_add(Map *m, const char *key, long delta) {
         }
     }
 
-    // Array um 1 Element vergrössern
+    // Array um 1 Element vergrössern z.B. Erhöhung von Platz für 2 KeyCount Strukturen auf 3 KeyCount Strukturen
     KeyCount *tmp = realloc(m->items, (m->n + 1) * sizeof(KeyCount));
     if (tmp == NULL) {
         printf("Fehler bei realloc\n");
         exit(1);
     }
+    //Neuer Pointer übernehmen
     m->items = tmp;
 
-    //Speicher für Kopie von key reservieren
+    //Speicher für Kopie von key reservieren, jetzt Platz für den neuen Eintrag
     {
-        size_t len = strlen(key) + 1;
+        size_t len = strlen(key) + 1; //+1 wegen '\0'
         m->items[m->n].key = (char*)malloc(len);
         if (m->items[m->n].key == NULL) {
             printf("Fehler bei malloc\n");
@@ -102,7 +103,7 @@ static void map_add(Map *m, const char *key, long delta) {
         }
         strcpy(m->items[m->n].key, key);
     }
-
+    //Zähler eintragen
     m->items[m->n].count = delta;
     m->n++;
 }
@@ -249,16 +250,16 @@ typedef struct {
     size_t total_words;
 } CompareResult;
 
-/* Vereinfachte Wortlogik: komplette Strings vergleichen, kein Tokenizing */
+// Vereinfachte Wortlogik: komplette Strings vergleichen, kein Tokenizing
 static CompareResult compare_and_update(const char *ref, const char *typed, Map *mwords, Map *mchars) {
     CompareResult res;
-    size_t i;
-    size_t rlen, tlen, minlen;
-
     res.correct_chars = 0;
     res.total_chars = 0;
     res.correct_words = 0;
     res.total_words = 0;
+    size_t i;
+    size_t rlen, tlen, minlen;
+
 
     if (ref == NULL) ref = "";
     if (typed == NULL) typed = "";
@@ -268,7 +269,7 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
     res.total_chars = rlen;
     minlen = (rlen < tlen) ? rlen : tlen;
 
-    /* Zeichenweise vergleichen */
+    // Zeichenweise vergleichen
     for (i = 0; i < minlen; i++) {
         if (typed[i] == ref[i]) {
             res.correct_chars++;
@@ -277,7 +278,7 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
         }
     }
 
-    /* fehlende Zeichen im typed */
+    // fehlende Zeichen im typed
     if (tlen < rlen) {
         for (i = tlen; i < rlen; i++) {
             map_add_char(mchars, ref[i], 1);
@@ -288,7 +289,7 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
         }
     }
 
-    /* Wortebene vereinfacht: Ganzes ref vs. typed */
+    // Ganzes ref vs. typed
     res.total_words = 1;
     if (strcmp(ref, typed) == 0) {
         res.correct_words = 1;
@@ -364,9 +365,7 @@ static void show_top_map(Map *m, int n) {
     free(copy);
 }
 
-/* ----------------------
-   Statistik anzeigen
-   ---------------------- */
+// Statistik anzeigen
 static void view_statistics(Map *mwords, Map *mchars) {
     double avg_wpm, best_wpm, avg_acc;
     size_t sessions;
@@ -461,20 +460,22 @@ static void start_practice(Map *mwords, Map *mchars) {
             total_words += cres.total_words;
             total_correct_words += cres.correct_words;
 
+            
             minutes = secs / 60.0;
+            //Gesamter Typing Speed egal ober fehlerhaft oder korrekt
             gross_wpm = 0.0;
             if (minutes > 0.0) {
-                gross_wpm = ((double)strlen(typed) / 5.0) / minutes;
+                gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen
             }
             if (strlen(typed) > 0) {
-                accuracy = ((double)cres.correct_chars / (double)strlen(typed)) * 100.0;
+                accuracy = ((double)cres.correct_chars / (double)strlen(typed)) * 100.0; //double da Kommazahlen
             } else {
                 accuracy = 0.0;
             }
 
             printf("\nResult for item %d:\n", i + 1);
-            printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",
-                   secs, strlen(typed), accuracy, gross_wpm);
+            //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t
+            printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",secs, strlen(typed), accuracy, gross_wpm);
 
             if (cres.total_words > 0) {
                 printf("  Words correct: %zu / %zu\n", cres.correct_words, cres.total_words);
