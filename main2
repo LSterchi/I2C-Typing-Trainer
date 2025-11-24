@@ -117,7 +117,10 @@ static void map_add_char(Map *m, char ch, long delta) {
 }
 
 // Für qsort: sortiert nach count absteigend, bei Gleichstand nach key
+// Muss folgendes Format haben > int cmp(const void *a, const void *b); 
+// Cast notwendig (innerhalb der Funktion), da diese Signatur von qsort so benötigt wird
 static int cmp_kc_desc(const void *a, const void *b) {
+    
     const KeyCount *A = (const KeyCount*)a;
     const KeyCount *B = (const KeyCount*)b;
 
@@ -202,6 +205,7 @@ static void compute_aggregate_stats(double *avg_wpm, double *best_wpm, double *a
         return;
     }
 
+    //fscanf > gibt die Anzahl erfolgreich eingelesener Felder zurück
     while (fscanf(f, "%*[^,],%lf,%lf,%ld\n", &wpm, &acc, &ch) == 3) { //Datum wird eingelesen (Kommas werden ignoriert) auser am Ende werden zwei Double und ein Long mit Kommatrennung und dann ein Zeilenumbruch
         (*sessions)++;
         *avg_wpm += wpm;
@@ -301,36 +305,37 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
     return res;
 }
 
-/* ----------------------
-   Zufallszahl [a,b]
-   ---------------------- */
+// Zufallszahl [a,b] 
 static int randint(int a, int b) {
-    return a + rand() % (b - a + 1);
+    return a + rand() % (b - a + 1); // +1 damit das obere Ende b inklusiv ist (Intervall [a,b] statt [a,b))
 }
 
 // Zeile einlesen
 static char *read_line(void) {
+    //Buffer nur innerhalb der Funktion
     char buffer[MAX_LINE];
     char *line;
     size_t len;
 
+    //Wenn fgets Null zurückgibt > keine Zeile gelesen
     if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         return NULL;
     }
     trim_newline(buffer);
     len = strlen(buffer);
+    
+    // Genau passend Speicher len Zeichen + 1 Byte für das '\0'
     line = (char*)malloc(len + 1);
     if (line == NULL) {
         printf("Fehler bei malloc\n");
-        exit(1);
+        exit(1); //Abbrechen wenn kein Speicher verfügbar ist
     }
     strcpy(line, buffer);
+    //buffer verschwindet nach Funktionsende (Stack daher kein Free), line bleibt gültig Heap dynamischer Speicher bis free verwendet wird
     return line;
 }
 
-/* ----------------------
-   Map anzeigen (Top N)
-   ---------------------- */
+// Map anzeigen (Top N)
 static void show_top_map(Map *m, int n) {
     size_t i;
     int limit;
@@ -340,7 +345,7 @@ static void show_top_map(Map *m, int n) {
         printf("  (none)\n");
         return;
     }
-
+    //Originaldaten der Map nicht verändern > Deshalb eine Kopie
     copy = (KeyCount*)malloc(m->n * sizeof(KeyCount));
     if (copy == NULL) {
         printf("Fehler bei malloc\n");
@@ -350,8 +355,9 @@ static void show_top_map(Map *m, int n) {
     for (i = 0; i < m->n; i++) {
         copy[i] = m->items[i];
     }
-    qsort(copy, m->n, sizeof(KeyCount), cmp_kc_desc);
+    qsort(copy, m->n, sizeof(KeyCount), cmp_kc_desc); //generisches Sortieren per Compare-Funktion (Array-Pointer, Anzahl Elemente, Grösse eine Elements, Vergleichsfunktion)
 
+    //Wenn n grösser als das eigentliche Array ist
     if (n < (int)m->n) {
         limit = n;
     } else {
@@ -359,6 +365,7 @@ static void show_top_map(Map *m, int n) {
     }
 
     for (i = 0; i < (size_t)limit; i++) {
+        //%d = int, %-12s = mind. Länge von 12 Zeichen daher alle ":" untereinander, %ld  = Long Count Wert
         printf("  %d) %-12s : %ld\n", (int)i + 1, copy[i].key, copy[i].count);
     }
 
@@ -373,7 +380,7 @@ static void view_statistics(Map *mwords, Map *mchars) {
     compute_aggregate_stats(&avg_wpm, &best_wpm, &avg_acc, &sessions);
 
     printf("\n=== Statistics ===\n");
-    printf("Sessions recorded: %zu\n", sessions);
+    printf("Sessions recorded: %zu\n", sessions); //%zu Format Specifier für size_t
     if (sessions > 0) {
         printf("Average WPM: %.2f\n", avg_wpm);
         printf("Best WPM   : %.2f\n", best_wpm);
@@ -432,14 +439,15 @@ static void start_practice(Map *mwords, Map *mchars) {
             size_t rlen, tlen, p, maxp;
 
             if (mode == 1) {
-                ref = word_bank[randint(0, (int)word_bank_count - 1)]; //-1 da von 0
+                ref = word_bank[randint(0, (int)word_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
             } else {
-                ref = sentence_bank[randint(0, (int)sentence_bank_count - 1)];
+                ref = sentence_bank[randint(0, (int)sentence_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
             }
 
             printf("\nItem %d/%d:\n%s\n", i + 1, n, ref);
             printf("Press ENTER when ready to start...");
             tmp = read_line();
+            //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde
             if (tmp != NULL) free(tmp);
 
             printf("Type it and press ENTER when done:\n> ");
@@ -465,7 +473,7 @@ static void start_practice(Map *mwords, Map *mchars) {
             //Gesamter Typing Speed egal ober fehlerhaft oder korrekt
             gross_wpm = 0.0;
             if (minutes > 0.0) {
-                gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen
+                gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen, /5 da Standardwert für ein Wort
             }
             if (strlen(typed) > 0) {
                 accuracy = ((double)cres.correct_chars / (double)strlen(typed)) * 100.0; //double da Kommazahlen
@@ -474,8 +482,8 @@ static void start_practice(Map *mwords, Map *mchars) {
             }
 
             printf("\nResult for item %d:\n", i + 1);
-            //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t
-            printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",secs, strlen(typed), accuracy, gross_wpm);
+            //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t, %% für escaped % Zeichen
+            printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",secs, strlen(typed), accuracy, gross_wpm); 
 
             if (cres.total_words > 0) {
                 printf("  Words correct: %zu / %zu\n", cres.correct_words, cres.total_words);
@@ -512,10 +520,10 @@ static void start_practice(Map *mwords, Map *mchars) {
             double accuracy_total = 0.0;
 
             if (minutes_total > 0.0) {
-                gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total;
+                gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total; //// WPM: durch 5 teilen, da 1 Wort = 5 Zeichen (Standarddefinition für Tippgeschwindigkeit)
             }
             if (total_chars_typed > 0) {
-                accuracy_total = ((double)total_correct_chars / (double)total_chars_typed) * 100.0;
+                accuracy_total = ((double)total_correct_chars / (double)total_chars_typed) * 100.0; //Anteil der korrekten Zeichen von alle geschriebenen Zeichen
             }
 
             printf("\n=== Session Summary ===\n");
@@ -546,10 +554,12 @@ static void training_mode(Map *mwords, Map *mchars) {
     printf("Focus options:\n1) Mistyped words\n2) Mistyped characters\nEnter choice: ");
     c = read_line();
     if (c == NULL) return;
+    //Convert String zu einem int
     choice = atoi(c);
+    //Free C da Heap speicher
     free(c);
 
-    if (choice == 1 && mwords->n > 0) {
+    if (choice == 1 && mwords->n > 0) { //mistyped words
         KeyCount *copy;
         size_t i;
         int n;
@@ -557,6 +567,7 @@ static void training_mode(Map *mwords, Map *mchars) {
         int rounds;
         int r;
 
+        //Copy um nicht die eigentliche Datenstruktur anzupassen
         copy = (KeyCount*)malloc(mwords->n * sizeof(KeyCount));
         if (copy == NULL) {
             printf("Fehler bei malloc\n");
@@ -565,8 +576,9 @@ static void training_mode(Map *mwords, Map *mchars) {
         for (i = 0; i < mwords->n; i++) {
             copy[i] = mwords->items[i];
         }
-        qsort(copy, mwords->n, sizeof(KeyCount), cmp_kc_desc);
+        qsort(copy, mwords->n, sizeof(KeyCount), cmp_kc_desc); //generisches Sortieren per Compare-Funktion (Array-Pointer, Anzahl Elemente, Grösse eine Elements, Vergleichsfunktion)
 
+        //Top N misstyped Wörter anzeigen
         n = (mwords->n < TOP_N) ? (int)mwords->n : TOP_N;
         printf("Top %d mistyped words:\n", n);
         for (i = 0; i < (size_t)n; i++) {
@@ -581,6 +593,8 @@ static void training_mode(Map *mwords, Map *mchars) {
         }
         rounds = atoi(s);
         free(s);
+        
+        //falls eine negative Rundenanzahl angegeben wurde
         if (rounds <= 0) rounds = 2;
 
         for (r = 0; r < rounds; r++) {
@@ -588,7 +602,7 @@ static void training_mode(Map *mwords, Map *mchars) {
                 const char *ref = copy[i].key;
                 char *tmp;
                 char *typed;
-                struct timeval start, end;
+                struct timeval start, end; //#include <sys/time.h>, time liefert nur Mikrosekunden, timeval ist ein Struct mit time_t tv_sec und susseconds_t tv_usec
                 double secs, minutes, gross_wpm, accuracy;
                 CompareResult cres;
 
@@ -597,9 +611,10 @@ static void training_mode(Map *mwords, Map *mchars) {
                 if (tmp != NULL) free(tmp);
 
                 printf("Type: ");
-                gettimeofday(&start, NULL);
+                gettimeofday(&start, NULL); //#include <sys/time.h>, time liefert nur Mikrosekunden, timeval ist ein Struct mit time_t tv_sec und susseconds_t tv_usec;
                 typed = read_line();
-                gettimeofday(&end, NULL);
+                gettimeofday(&end, NULL); //#include <sys/time.h>, time liefert nur Mikrosekunden, timeval ist ein Struct mit time_t tv_sec und susseconds_t tv_usec;
+                //Weil bei Typed == NULL würde das Programm beendet werden, wenn der User z.B. nur Enter drückt
                 if (typed == NULL) {
                     typed = (char*)malloc(1);
                     if (typed == NULL) { printf("Fehler bei malloc\n"); exit(1); }
@@ -610,7 +625,7 @@ static void training_mode(Map *mwords, Map *mchars) {
                 secs = elapsed_seconds(start, end);
                 minutes = secs / 60.0;
                 if (minutes > 0.0) {
-                    gross_wpm = ((double)strlen(typed) / 5.0) / minutes;
+                    gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen, /5 da Standardwert für ein Wort
                 } else {
                     gross_wpm = 0.0;
                 }
@@ -619,14 +634,12 @@ static void training_mode(Map *mwords, Map *mchars) {
                 } else {
                     accuracy = 0.0;
                 }
-
-                printf("  Result: Time %.2fs  WPM %.2f  Accuracy %.2f%%\n",
-                       secs, gross_wpm, accuracy);
+                //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t, %% für escaped % Zeichen
+                printf("  Result: Time %.2fs  WPM %.2f  Accuracy %.2f%%\n",secs, gross_wpm, accuracy);
 
                 free(typed);
             }
         }
-
         free(copy);
         save_map_to_file(mwords, MWORDS_FILE);
         save_map_to_file(mchars, MCHARS_FILE);
@@ -646,7 +659,7 @@ static void training_mode(Map *mwords, Map *mchars) {
         for (i = 0; i < mchars->n; i++) {
             copy[i] = mchars->items[i];
         }
-        qsort(copy, mchars->n, sizeof(KeyCount), cmp_kc_desc);
+        qsort(copy, mchars->n, sizeof(KeyCount), cmp_kc_desc); //generisches Sortieren per Compare-Funktion (Array-Pointer, Anzahl Elemente, Grösse eine Elements, Vergleichsfunktion)
 
         n = (mchars->n < TOP_N) ? (int)mchars->n : TOP_N;
         printf("Top %d mistyped chars:\n", n);
