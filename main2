@@ -1,7 +1,5 @@
-/*
-TypingTrainer - console typing practice with persistent stats and mistake analysis
-Einfachere C-Version (C11), eher im Stil eines C-Einsteigers.
-*/
+// TypingTrainer - console typing practice with persistent stats and mistake analysis
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,9 +16,7 @@ Einfachere C-Version (C11), eher im Stil eines C-Einsteigers.
 #define MAX_LINE 512
 #define TOP_N 10
 
-/* ----------------------
-   Einfache Wort- und Satzlisten
-   ---------------------- */
+// Einfache Wort- und Satzlisten
 static const char *word_bank[] = {
     "the","quick","brown","fox","jumps","over","lazy","dog","keyboard","practice",
     "function","variable","pointer","memory","array","string","compile","debug",
@@ -403,7 +399,7 @@ static void start_practice(Map *mwords, Map *mchars) {
 
     printf("\nStart Practice\n");
     printf("1) Word practice\n2) Sentence practice\nEnter choice: ");
-    choice = read_line();
+    choice = read_line(); //malloc innerhalb der Funktion
     if (choice == NULL) return;
     mode = atoi(choice);
     free(choice);
@@ -447,7 +443,7 @@ static void start_practice(Map *mwords, Map *mchars) {
             printf("\nItem %d/%d:\n%s\n", i + 1, n, ref);
             printf("Press ENTER when ready to start...");
             tmp = read_line();
-            //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde
+            //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde, die Nummer wird nicht mehr benötigt
             if (tmp != NULL) free(tmp);
 
             printf("Type it and press ENTER when done:\n> ");
@@ -538,9 +534,7 @@ static void start_practice(Map *mwords, Map *mchars) {
     }
 }
 
-/* ----------------------
-   Training Mode (Mistakes-Fokus)
-   ---------------------- */
+// Training Mode (Mistakes-Fokus)
 static void training_mode(Map *mwords, Map *mchars) {
     char *c;
     int choice;
@@ -608,6 +602,7 @@ static void training_mode(Map *mwords, Map *mchars) {
 
                 printf("\n%s\nPress ENTER when ready...", ref);
                 tmp = read_line();
+                //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde, die Nummer wird nicht mehr benötigt
                 if (tmp != NULL) free(tmp);
 
                 printf("Type: ");
@@ -644,13 +639,14 @@ static void training_mode(Map *mwords, Map *mchars) {
         save_map_to_file(mwords, MWORDS_FILE);
         save_map_to_file(mchars, MCHARS_FILE);
         printf("Training done. Mistake counts updated.\n");
-    } else if (choice == 2 && mchars->n > 0) {
+    } else if (choice == 2 && mchars->n > 0) { //misstyped chars
         KeyCount *copy;
         size_t i;
         int n;
         char *s;
         int reps;
 
+        //Copy um nicht die eigentliche Datenstruktur anzupassen
         copy = (KeyCount*)malloc(mchars->n * sizeof(KeyCount));
         if (copy == NULL) {
             printf("Fehler bei malloc\n");
@@ -661,12 +657,13 @@ static void training_mode(Map *mwords, Map *mchars) {
         }
         qsort(copy, mchars->n, sizeof(KeyCount), cmp_kc_desc); //generisches Sortieren per Compare-Funktion (Array-Pointer, Anzahl Elemente, Grösse eine Elements, Vergleichsfunktion)
 
+        //Top N misstyped Wörter anzeigen
         n = (mchars->n < TOP_N) ? (int)mchars->n : TOP_N;
         printf("Top %d mistyped chars:\n", n);
         for (i = 0; i < (size_t)n; i++) {
             printf("  %d) '%s' (%ld)\n", (int)i + 1, copy[i].key, copy[i].count);
         }
-
+        
         printf("How many repetitions per char? (e.g. 5): ");
         s = read_line();
         if (s == NULL) {
@@ -675,6 +672,7 @@ static void training_mode(Map *mwords, Map *mchars) {
         }
         reps = atoi(s);
         free(s);
+        //falls eine negative Repetitionsanzahl angegeben wurde
         if (reps <= 0) reps = 5;
 
         for (i = 0; i < (size_t)n; i++) {
@@ -682,7 +680,9 @@ static void training_mode(Map *mwords, Map *mchars) {
             int r;
             char *tmp;
             printf("\nPractice character '%c' (%d times). Press ENTER when ready...", target, reps);
+            //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde, die Nummer wird nicht mehr benötigt
             tmp = read_line();
+            
             if (tmp != NULL) free(tmp);
 
             for (r = 0; r < reps; r++) {
@@ -690,6 +690,7 @@ static void training_mode(Map *mwords, Map *mchars) {
                 printf("Type '%c': ", target);
                 typed = read_line();
                 if (typed == NULL) {
+                    //Weil bei Typed == NULL würde das Programm beendet werden, wenn der User z.B. nur Enter drückt
                     typed = (char*)malloc(1);
                     if (typed == NULL) { printf("Fehler bei malloc\n"); exit(1); }
                     typed[0] = '\0';
