@@ -11,7 +11,7 @@
 #define STATS_FILE  "stats.txt"
 #define MWORDS_FILE "mistakes_words.txt"
 #define MCHARS_FILE "mistakes_chars.txt"
-
+//test
 #define WORDS_LIST_SIZE 200
 #define MAX_LINE 512
 #define TOP_N 10
