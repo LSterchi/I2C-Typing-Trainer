@@ -11,29 +11,46 @@
 #define STATS_FILE  "stats.txt"
 #define MWORDS_FILE "mistakes_words.txt"
 #define MCHARS_FILE "mistakes_chars.txt"
-
 #define MAX_LINE 512
 #define TOP_N 10
 
 // Einfache Wort und Satzlisten
 static const char *word_bank[] = {
-    "the","quick","brown","fox","jumps","over","lazy","dog","keyboard","practice",
-    "function","variable","pointer","memory","array","string","compile","debug",
-    "project","program","structure","coding","computer","process","thread",
-    "input","output","speed","accuracy","challenge","training","exercise",
-    "typist","development","education","system","design","language","data",
-    "persistent","statistics","analysis","improve","learning","interface",
-    "session","record","history","mistake","correct","wrong","practice"
+    "Haus","Baum","Wasser","Feuer","Erde","Luft","Himmel","Sonne","Mond","Stern",
+    "Mensch","Tier","Freund","Straße","Auto","Zug","Bus","Fahrrad","Schule","Lehrer",
+    "Schüler","Buch","Papier","Stift","Computer","Tastatur","Maus","Bildschirm","Tisch","Stuhl",
+    "Fenster","Tür","Küche","Bad","Garten","Blume","Gras","Wald","Berg","Tal",
+    "Fluss","See","Meer","Insel","Stadt","Dorf","Markt","Laden","Arbeit","Urlaub",
+    "Spiel","Musik","Lied","Stimme","Sprache","Wort","Satz","Frage","Antwort","Zeit",
+    "Tag","Nacht","Woche","Monat","Jahr","Uhr","Minute","Sekunde","Familie","Mutter",
+    "Vater","Bruder","Schwester","Kind","Baby","Essen","Trinken","Brot","Wasserflasche","Kaffee",
+    "Tee","Zucker","Salz","Pfeffer","Messer","Gabel","Löffel","Teller","Tasse","Kleid",
+    "Hose","Jacke","Schuh","Tasche","Schlüssel","Telefon","Nachricht","Arbeitstag","Feierabend","Gesundheit"
 };
 
 static const size_t word_bank_count = sizeof(word_bank) / sizeof(word_bank[0]);
 
 static const char *sentence_bank[] = {
-    "The quick brown fox jumps over the lazy dog.",
-    "Practice makes progress and consistent effort brings improvement.",
-    "Typing fast requires accuracy before speed will follow.",
-    "C programming teaches careful thinking about memory and behavior.",
-    "Focus on home row, keep your fingers relaxed and eyes on the screen."
+    "Der schnelle braune Fuchs springt ueber den faulen Hund.",
+    "Uebung macht den Meister und regelmaessiges Training bringt Erfolg.",
+    "Schnelles Tippen erfordert zuerst Genauigkeit, dann folgt die Geschwindigkeit.",
+    "C Programmierung lehrt sorgfaeltiges Denken ueber Speicher und Verhalten.",
+    "Konzentriere dich auf die Grundreihe und halte deine Finger entspannt.",
+    "Jeder Tag bietet eine neue Chance, etwas dazu zu lernen.",
+    "Geduld und Ausdauer sind der Schluessel zu langfristigem Fortschritt.",
+    "Eine gute Haltung verbessert sowohl Komfort als auch Tippgeschwindigkeit.",
+    "Kleine Schritte fuehren oft zu grossen Veraenderungen.",
+    "Fehler sind Teil des Prozesses und helfen beim Lernen.",
+    "Ein klarer Kopf erleichtert das Arbeiten am Computer.",
+    "Wiederholung festigt das Gelernte und staerkt das Vertrauen.",
+    "Ein geordneter Arbeitsplatz steigert die Konzentration.",
+    "Kurze Pausen helfen dabei, die Haende zu entspannen.",
+    "Regelmaessiges Training verbessert Praezision und Geschwindigkeit.",
+    "Konsequentes Lernen fuehrt zu spuerbaren Ergebnissen.",
+    "Ein ruhiges Umfeld macht das Tippen angenehmer.",
+    "Denke vor jedem Anschlag ueber die richtige Fingerposition nach.",
+    "Je mehr du tippst, desto natuerlicher fuehlt es sich an.",
+    "Achte beim Schreiben auf fluessige Bewegungen und gleichmaessigen Rhythmus."
 };
 static const size_t sentence_bank_count = sizeof(sentence_bank) / sizeof(sentence_bank[0]);
 
