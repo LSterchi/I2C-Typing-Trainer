@@ -144,7 +144,7 @@ static int cmp_kc_desc(const void *a, const void *b) {
     return strcmp(A->key, B->key);
 }
 
-// File IO für Maps: "key TAB count\n"
+//File IO für Maps: "key TAB count\n"
 static void load_map_from_file(Map *m, const char *filename) {
     FILE *f = fopen(filename, "r");
     if (f == NULL) {
@@ -233,31 +233,14 @@ static void compute_aggregate_stats(double *avg_wpm, double *best_wpm, double *a
     }
 }
 
-// Zeilenende entfernen
-static void trim_newline(char *s) {
-    size_t l;
-
-    if (s == NULL) return;
-    l = strlen(s);
-    if (l == 0) return;
-
-    if (s[l-1] == '\n') {
-        s[l-1] = '\0';
-        l--;
-    }
-    if (l > 0 && s[l-1] == '\r') { //weil bei Windows manchmal noch \r\n eingelsen wird
-        s[l-1] = '\0';
-    }
-}
-
-// Zeitdifferenz in Sekunden
+//Zeitdifferenz in Sekunden
 static double elapsed_seconds(struct timeval start, struct timeval end) {
     double s = (double)(end.tv_sec - start.tv_sec);
     double us = (double)(end.tv_usec - start.tv_usec) / 1000000.0; //Mikrosekunden in Sekunden
     return s + us;
 }
 
-// Zusammenfassen des Compare Results in einem Struct
+//Zusammenfassen des Compare Results in einem Struct
 typedef struct {
     size_t correct_chars;
     size_t total_chars;
@@ -315,12 +298,12 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
     return res;
 }
 
-// Zufallszahl [a,b] 
+//Zufallszahl [a,b] 
 static int randint(int a, int b) {
     return a + rand() % (b - a + 1); // +1 damit das obere Ende b inklusiv ist (Intervall [a,b] statt [a,b))
 }
 
-// Zeile einlesen
+//Zeile einlesen
 static char *read_line(void) {
     //Buffer nur innerhalb der Funktion
     char buffer[MAX_LINE];
@@ -331,7 +314,6 @@ static char *read_line(void) {
     if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
         return NULL;
     }
-    trim_newline(buffer);
     len = strlen(buffer);
     
     // Genau passend Speicher len Zeichen + 1 Byte für das '\0'
@@ -345,7 +327,7 @@ static char *read_line(void) {
     return line;
 }
 
-// Map anzeigen (Top N)
+//Map anzeigen (Top N)
 static void show_top_map(Map *m, int n) {
     size_t i;
     int limit;
@@ -382,7 +364,7 @@ static void show_top_map(Map *m, int n) {
     free(copy);
 }
 
-// Statistik anzeigen
+//Statistik anzeigen
 static void view_statistics(Map *mwords, Map *mchars) {
     double avg_wpm, best_wpm, avg_acc;
     size_t sessions;
@@ -403,7 +385,7 @@ static void view_statistics(Map *mwords, Map *mchars) {
     printf("=====================\n\n");
 }
 
-//  Practice-Session (Wörter oder Sätze)
+//Practice-Session (Wörter oder Sätze)
 static void start_practice(Map *mwords, Map *mchars) {
     char *choice;
     int mode;
@@ -429,133 +411,132 @@ static void start_practice(Map *mwords, Map *mchars) {
     free(numberitems);
     if (n <= 0) n = 10;
 
-    { //Gültigkeitsbereich
-        size_t total_chars_typed = 0;
-        size_t total_correct_chars = 0;
-        size_t total_words = 0;
-        size_t total_correct_words = 0;
-        double total_seconds = 0.0;
 
-        for (i = 0; i < n; i++) {
-            const char *ref; //Value ist Konstant, Adresse kann sicher ändern, Value kann nicht angepasst werden
-            char *tmp;
-            char *typed;
-            struct timeval start, end;
-            double secs;
-            CompareResult cres;
-            double minutes;
-            double gross_wpm;
-            double accuracy;
+    size_t total_chars_typed = 0;
+    size_t total_correct_chars = 0;
+    size_t total_words = 0;
+    size_t total_correct_words = 0;
+    double total_seconds = 0.0;
 
-            if (mode == 1) {
-                ref = word_bank[randint(0, (int)word_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
-            } else {
-                ref = sentence_bank[randint(0, (int)sentence_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
-            }
+    for (i = 0; i < n; i++) {
+        const char *ref; //Value ist Konstant, Adresse kann sicher ändern, Value kann nicht angepasst werden
+        char *tmp;
+        char *typed;
+        struct timeval start, end;
+        double secs;
+        CompareResult cres;
+        double minutes;
+        double gross_wpm;
+        double accuracy;
 
-            printf("\nItem %d/%d:\n%s\n", i + 1, n, ref);
-            printf("Press ENTER when ready to start...");
-            tmp = read_line();
-            //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde, die Nummer wird nicht mehr benötigt
-            if (tmp != NULL) free(tmp);
+        if (mode == 1) {
+            ref = word_bank[randint(0, (int)word_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
+        } else {
+            ref = sentence_bank[randint(0, (int)sentence_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
+        }
 
-            printf("Type it and press ENTER when done:\n> ");
-            gettimeofday(&start, NULL); //#include <sys/time.h>, time liefert nur Mikrosekunden, timeval ist ein Struct mit time_t tv_sec und susseconds_t tv_usec;
-            typed = read_line();
-            gettimeofday(&end, NULL); //#include <sys/time.h> 
-            if (typed == NULL) {
-                typed = (char*)malloc(1);
-                if (typed == NULL) { printf("Fehler bei malloc\n"); exit(1); }
-                typed[0] = '\0';
-            }
-            secs = elapsed_seconds(start, end);
-            total_seconds += secs;
+        printf("\nItem %d/%d:\n%s\n", i + 1, n, ref);
+        printf("Press ENTER when ready to start...");
+        tmp = read_line();
+        //free tmp wenn ungleich null da durch read_line ein malloc durchgeführt wurde, die Nummer wird nicht mehr benötigt
+        if (tmp != NULL) free(tmp);
 
-            cres = compare_and_update(ref, typed, mwords, mchars);
-            total_chars_typed += strlen(typed);
-            total_correct_chars += cres.correct_chars;
-            total_words += cres.total_words;
-            total_correct_words += cres.correct_words;
+        printf("Type it and press ENTER when done:\n> ");
+        gettimeofday(&start, NULL); //#include <sys/time.h>, time liefert nur Mikrosekunden, timeval ist ein Struct mit time_t tv_sec und susseconds_t tv_usec;
+        typed = read_line();
+        gettimeofday(&end, NULL); //#include <sys/time.h> 
+        if (typed == NULL) {
+            typed = (char*)malloc(1);
+            if (typed == NULL) { printf("Fehler bei malloc\n"); exit(1); }
+            typed[0] = '\0';
+        }
+        secs = elapsed_seconds(start, end);
+        total_seconds += secs;
 
-            
-            minutes = secs / 60.0;
-            //Gesamter Typing Speed egal ober fehlerhaft oder korrekt
-            gross_wpm = 0.0;
-            if (minutes > 0.0) {
-                gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen, /5 da Standardwert für ein Wort
-            }
-            if (strlen(typed) > 0) {
-                accuracy = ((double)cres.correct_chars / (double)strlen(typed)) * 100.0; //double da Kommazahlen
-            } else {
-                accuracy = 0.0;
-            }
+        cres = compare_and_update(ref, typed, mwords, mchars);
+        total_chars_typed += strlen(typed);
+        total_correct_chars += cres.correct_chars;
+        total_words += cres.total_words;
+        total_correct_words += cres.correct_words;
 
-            printf("\nResult for item %d:\n", i + 1);
-            //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t, %% für escaped % Zeichen
-            printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",secs, strlen(typed), accuracy, gross_wpm); 
+        
+        minutes = secs / 60.0;
+        //Gesamter Typing Speed egal ober fehlerhaft oder korrekt
+        gross_wpm = 0.0;
+        if (minutes > 0.0) {
+            gross_wpm = ((double)strlen(typed) / 5.0) / minutes; //double da Kommazahlen, /5 da Standardwert für ein Wort
+        }
+        if (strlen(typed) > 0) {
+            accuracy = ((double)cres.correct_chars / (double)strlen(typed)) * 100.0; //double da Kommazahlen
+        } else {
+            accuracy = 0.0;
+        }
 
-            if (cres.total_words > 0) {
-                printf("  Words correct: %zu / %zu\n", cres.correct_words, cres.total_words);
-            }
+        printf("\nResult for item %d:\n", i + 1);
+        //%.2f = 2 Kommastellen, %zu Format Specifier für einen size_t, %% für escaped % Zeichen
+        printf("  Time: %.2fs  Chars typed: %zu  Accuracy: %.2f%%  WPM (gross): %.2f\n",secs, strlen(typed), accuracy, gross_wpm); 
 
-            if (cres.correct_chars < cres.total_chars) {
-                printf("  Mismatches (reference -> typed) at positions:\n");
+        if (cres.total_words > 0) {
+            printf("  Words correct: %zu / %zu\n", cres.correct_words, cres.total_words);
+        }
 
-                size_t rlen = strlen(ref);
-                size_t tlen = strlen(typed);
-                size_t maxp = (rlen > tlen) ? rlen : tlen;
+        if (cres.correct_chars < cres.total_chars) {
+            printf("  Mismatches (reference -> typed) at positions:\n");
 
-                for (size_t p = 0; p < maxp; p++) {
-                    char rc = (p < rlen) ? ref[p] : '\0';
-                    char tc = (p < tlen) ? typed[p] : '\0';
+            size_t rlen = strlen(ref);
+            size_t tlen = strlen(typed);
+            size_t maxp = (rlen > tlen) ? rlen : tlen;
 
-                    // Make non-printable or missing chars visible as '?'
-                    char r_disp = isprint((unsigned char)rc) ? rc : '?';
-                    char t_disp = isprint((unsigned char)tc) ? tc : '?';
+            for (size_t p = 0; p < maxp; p++) {
+                char rc = (p < rlen) ? ref[p] : '\0';
+                char tc = (p < tlen) ? typed[p] : '\0';
 
-                    if (r_disp != t_disp) {
-                        printf("   pos %zu: '%c' -> '%c'\n", p + 1, r_disp, t_disp);
-                    }
+                // Make non-printable or missing chars visible as '?'
+                char r_disp = isprint((unsigned char)rc) ? rc : '?';
+                char t_disp = isprint((unsigned char)tc) ? tc : '?';
+
+                if (r_disp != t_disp) {
+                    printf("   pos %zu: '%c' -> '%c'\n", p + 1, r_disp, t_disp);
                 }
             }
-
-            else {
-                printf("  Perfect for this item!\n");
-            }
-
-            free(typed);
         }
 
-        {
-            double minutes_total = total_seconds / 60.0;
-            double gross_wpm_total = 0.0;
-            double accuracy_total = 0.0;
-
-            if (minutes_total > 0.0) {
-                gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total; // WPM: durch 5 teilen, da 1 Wort = 5 Zeichen (Standarddefinition für Tippgeschwindigkeit)
-            }
-            if (total_chars_typed > 0) {
-                accuracy_total = ((double)total_correct_chars / (double)total_chars_typed) * 100.0; //Anteil der korrekten Zeichen von alle geschriebenen Zeichen
-            }
-
-            printf("\n=== Session Summary ===\n");
-            printf("Items: %d  Total time: %.2fs  Total chars typed: %zu\n", n, total_seconds, total_chars_typed);
-            printf("Gross WPM: %.2f   Accuracy: %.2f%%\n", gross_wpm_total, accuracy_total);
-
-            append_session_stats(gross_wpm_total, accuracy_total, (long)total_chars_typed);
-            save_map_to_file(mwords, MWORDS_FILE);
-            save_map_to_file(mchars, MCHARS_FILE);
-            printf("Session saved.\n");
+        else {
+            printf("  Perfect for this item!\n");
         }
+
+        free(typed);
     }
+
+
+    double minutes_total = total_seconds / 60.0;
+    double gross_wpm_total = 0.0;
+    double accuracy_total = 0.0;
+
+    if (minutes_total > 0.0) {
+        gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total; // WPM: durch 5 teilen, da 1 Wort = 5 Zeichen (Standarddefinition für Tippgeschwindigkeit)
+    }
+    if (total_chars_typed > 0) {
+        accuracy_total = ((double)total_correct_chars / (double)total_chars_typed) * 100.0; //Anteil der korrekten Zeichen von alle geschriebenen Zeichen
+    }
+
+    printf("\n=== Session Summary ===\n");
+    printf("Items: %d  Total time: %.2fs  Total chars typed: %zu\n", n, total_seconds, total_chars_typed);
+    printf("Gross WPM: %.2f   Accuracy: %.2f%%\n", gross_wpm_total, accuracy_total);
+
+    append_session_stats(gross_wpm_total, accuracy_total, (long)total_chars_typed);
+    save_map_to_file(mwords, MWORDS_FILE);
+    save_map_to_file(mchars, MCHARS_FILE);
+    printf("Session saved.\n");
+    
 }
 
-// Training Mode
+//Training Mode - noch offen
 static void training_mode(Map *mwords, Map *mchars) {
 
 }
 
-// Main
+//Main
 int main(void) {
     Map mistakes_words;
     Map mistakes_chars;
