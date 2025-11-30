@@ -12,7 +12,6 @@
 #define MWORDS_FILE "mistakes_words.txt"
 #define MCHARS_FILE "mistakes_chars.txt"
 
-#define WORDS_LIST_SIZE 200
 #define MAX_LINE 512
 #define TOP_N 10
 
@@ -341,7 +340,7 @@ static void show_top_map(Map *m, int n) {
         return;
     }
     //Originaldaten der Map nicht verändern > Deshalb eine Kopie
-    copy = (KeyCount*)malloc(m->n * sizeof(KeyCount));
+    copy = malloc(m->n * sizeof(KeyCount));
     if (copy == NULL) {
         printf("Fehler bei malloc\n");
         return;
@@ -561,7 +560,7 @@ static void training_mode(Map *mwords, Map *mchars) {
         int r;
 
         //Copy um nicht die eigentliche Datenstruktur anzupassen
-        copy = (KeyCount*)malloc(mwords->n * sizeof(KeyCount));
+        copy = malloc(mwords->n * sizeof(KeyCount));
         if (copy == NULL) {
             printf("Fehler bei malloc\n");
             return;
@@ -646,7 +645,7 @@ static void training_mode(Map *mwords, Map *mchars) {
         int reps;
 
         //Copy um nicht die eigentliche Datenstruktur anzupassen
-        copy = (KeyCount*)malloc(mchars->n * sizeof(KeyCount));
+        copy = malloc(mchars->n * sizeof(KeyCount));
         if (copy == NULL) {
             printf("Fehler bei malloc\n");
             return;
