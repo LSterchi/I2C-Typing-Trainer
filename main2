@@ -1,4 +1,4 @@
-// TypingTrainer - console typing practice with persistent stats and mistake analysis
+// TypingTrainer
 
 
 #include <stdio.h>
@@ -11,12 +11,12 @@
 #define STATS_FILE  "stats.txt"
 #define MWORDS_FILE "mistakes_words.txt"
 #define MCHARS_FILE "mistakes_chars.txt"
-//test
+
 #define WORDS_LIST_SIZE 200
 #define MAX_LINE 512
 #define TOP_N 10
 
-// Einfache Wort- und Satzlisten
+// Einfache Wort und Satzlisten
 static const char *word_bank[] = {
     "the","quick","brown","fox","jumps","over","lazy","dog","keyboard","practice",
     "function","variable","pointer","memory","array","string","compile","debug",
@@ -39,7 +39,6 @@ static const char *sentence_bank[] = {
 static const size_t sentence_bank_count = sizeof(sentence_bank) / sizeof(sentence_bank[0]);
 
 //Einfache Map für Fehler (key -> count)
-
 typedef struct {
     char *key;
     long count;
@@ -160,7 +159,7 @@ static void save_map_to_file(Map *m, const char *filename) {
     FILE *f = fopen(filename, "w"); //Im Write Modus öffnen
     size_t i;
     if (f == NULL) {
-        perror("fopen");
+        perror("fopen"); //built in error function, mit eigenem Text
         return;
     }
     for (i = 0; i < m->n; i++) {
@@ -173,11 +172,11 @@ static void save_map_to_file(Map *m, const char *filename) {
 static void append_session_stats(double wpm, double accuracy, long chars) {
     FILE *f = fopen(STATS_FILE, "a"); //Create if exists, otherwise open and append
     if (f == NULL) {
-        perror("fopen stats");
+        perror("fopen stats"); //built in error function, mit eigenem Text
         return;
     }
     
-    time_t t = time(NULL); //Ein Typalias für einen ganzzahligen Datentyp (Integer).
+    time_t t = time(NULL); //time_t = Ein Typalias für einen ganzzahligen Datentyp (Integer).
     struct tm *tm_info = localtime(&t); 
     char buf[64];
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", tm_info);
