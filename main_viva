@@ -551,10 +551,10 @@ int main(void) {
     load_map_from_file(&mistakes_chars, MCHARS_FILE);
 
     while (1) {
-        printf("\n=== TypingTrainer - Type-Celerate ===\n");
+        printf("\n=== TypingTrainer - Type-Celerate ==\n");
         printf("1) Start Practice\n");
         printf("2) View Statistics\n");
-        printf("3) Training Mode (focus on mistakes)\n");
+        printf("3) Training Mode\n");
         printf("4) Exit\n");
         printf("Enter choice: ");
 
@@ -583,6 +583,6 @@ int main(void) {
     map_free(&mistakes_words);
     map_free(&mistakes_chars);
 
-    printf("Goodbye — keep practicing!\n");
+    printf("Goodbye!\n");
     return 0;
 }
