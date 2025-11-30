@@ -233,7 +233,7 @@ static void compute_aggregate_stats(double *avg_wpm, double *best_wpm, double *a
     }
 }
 
-// Utility: Zeilenende entfernen
+// Zeilenende entfernen
 static void trim_newline(char *s) {
     size_t l;
 
@@ -265,7 +265,6 @@ typedef struct {
     size_t total_words;
 } CompareResult;
 
-// Vereinfachte Wortlogik: komplette Strings vergleichen, kein Tokenizing
 static CompareResult compare_and_update(const char *ref, const char *typed, Map *mwords, Map *mchars) {
     CompareResult res;
     res.correct_chars = 0;
@@ -533,7 +532,7 @@ static void start_practice(Map *mwords, Map *mchars) {
             double accuracy_total = 0.0;
 
             if (minutes_total > 0.0) {
-                gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total; //// WPM: durch 5 teilen, da 1 Wort = 5 Zeichen (Standarddefinition für Tippgeschwindigkeit)
+                gross_wpm_total = ((double)total_chars_typed / 5.0) / minutes_total; // WPM: durch 5 teilen, da 1 Wort = 5 Zeichen (Standarddefinition für Tippgeschwindigkeit)
             }
             if (total_chars_typed > 0) {
                 accuracy_total = ((double)total_correct_chars / (double)total_chars_typed) * 100.0; //Anteil der korrekten Zeichen von alle geschriebenen Zeichen
