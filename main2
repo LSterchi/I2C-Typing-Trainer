@@ -511,9 +511,9 @@ static void start_practice(Map *mwords, Map *mchars) {
                     if (rc != tc) {
                         char rs[3];
                         char ts[3];
-                        rs[0] = isprint((unsigned char)rc) ? rc : '?';
+                        rs[0] = isprint((unsigned char)rc) ? rc : '?'; //prüft ob druckbares Zeichen (inkl. Leerzeichen)
                         rs[1] = '\0';
-                        ts[0] = isprint((unsigned char)tc) ? tc : '?';
+                        ts[0] = isprint((unsigned char)tc) ? tc : '?';//prüft ob druckbares Zeichen (inkl. Leerzeichen)
                         ts[1] = '\0';
                         printf("   pos %zu: '%s' -> '%s'\n", p + 1, rs, ts);
                     }
