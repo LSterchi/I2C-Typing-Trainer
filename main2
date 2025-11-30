@@ -78,7 +78,7 @@ static void map_add(Map *m, const char *key, long delta) {
         }
     }
 
-    // Array um 1 Element vergrössern z.B. Erhöhung von Platz für 2 KeyCount Strukturen auf 3 KeyCount Strukturen
+    // Array um 1 Element vergrössern z.B. Erhöhung von Platz für 2 KeyCount Strukturen auf 3 KeyCount Strukturen (nur die fuer die Pointer)
     KeyCount *tmp = realloc(m->items, (m->n + 1) * sizeof(KeyCount));
     if (tmp == NULL) {
         printf("Fehler bei realloc\n");
