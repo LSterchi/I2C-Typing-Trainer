@@ -105,15 +105,13 @@ static void map_add(Map *m, const char *key, long delta) {
     m->items = tmp;
 
     //Speicher für Kopie von key reservieren, jetzt Platz für den neuen Eintrag
-    {
-        size_t len = strlen(key) + 1; //+1 wegen '\0'
-        m->items[m->n].key = (char*)malloc(len);
-        if (m->items[m->n].key == NULL) {
-            printf("Fehler bei malloc\n");
-            exit(1);
-        }
-        strcpy(m->items[m->n].key, key);
+    size_t len = strlen(key) + 1; //+1 wegen '\0'
+    m->items[m->n].key = (char*)malloc(len);
+    if (m->items[m->n].key == NULL) {
+        printf("Fehler bei malloc\n");
+        exit(1);
     }
+    strcpy(m->items[m->n].key, key);
     //Zähler eintragen
     m->items[m->n].count = delta;
     m->n++;
@@ -502,7 +500,7 @@ static void start_practice(Map *mwords, Map *mchars) {
         }
 
         else {
-            printf("  Perfect for this item!\n");
+            printf("Perfect!\n");
         }
 
         free(typed);
