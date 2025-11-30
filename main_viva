@@ -574,7 +574,7 @@ int main(void) {
         } else if (c == 4) {
             break;
         } else {
-            printf("Invalid choice.\n");
+            printf("Invalid choice\n");
         }
     }
 
