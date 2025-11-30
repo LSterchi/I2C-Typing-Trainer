@@ -447,7 +447,6 @@ static void start_practice(Map *mwords, Map *mchars) {
             double minutes;
             double gross_wpm;
             double accuracy;
-            size_t rlen, tlen, p, maxp;
 
             if (mode == 1) {
                 ref = word_bank[randint(0, (int)word_bank_count - 1)]; //-1 da von 0, eigene Funktion mit Modulo
@@ -502,23 +501,26 @@ static void start_practice(Map *mwords, Map *mchars) {
 
             if (cres.correct_chars < cres.total_chars) {
                 printf("  Mismatches (reference -> typed) at positions:\n");
-                rlen = strlen(ref);
-                tlen = strlen(typed);
-                maxp = (rlen > tlen) ? rlen : tlen;
-                for (p = 0; p < maxp; p++) {
-                    char rc = (p < rlen) ? ref[p] : '?';
-                    char tc = (p < tlen) ? typed[p] : '?';
-                    if (rc != tc) {
-                        char rs[3];
-                        char ts[3];
-                        rs[0] = isprint((unsigned char)rc) ? rc : '?'; //prüft ob druckbares Zeichen (inkl. Leerzeichen)
-                        rs[1] = '\0';
-                        ts[0] = isprint((unsigned char)tc) ? tc : '?';//prüft ob druckbares Zeichen (inkl. Leerzeichen)
-                        ts[1] = '\0';
-                        printf("   pos %zu: '%s' -> '%s'\n", p + 1, rs, ts);
+
+                size_t rlen = strlen(ref);
+                size_t tlen = strlen(typed);
+                size_t maxp = (rlen > tlen) ? rlen : tlen;
+
+                for (size_t p = 0; p < maxp; p++) {
+                    char rc = (p < rlen) ? ref[p] : '\0';
+                    char tc = (p < tlen) ? typed[p] : '\0';
+
+                    // Make non-printable or missing chars visible as '?'
+                    char r_disp = isprint((unsigned char)rc) ? rc : '?';
+                    char t_disp = isprint((unsigned char)tc) ? tc : '?';
+
+                    if (r_disp != t_disp) {
+                        printf("   pos %zu: '%c' -> '%c'\n", p + 1, r_disp, t_disp);
                     }
                 }
-            } else {
+            }
+
+            else {
                 printf("  Perfect for this item!\n");
             }
 
