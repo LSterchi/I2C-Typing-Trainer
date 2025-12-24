@@ -8,13 +8,14 @@
 #include <ctype.h>
 #include <time.h>
 
-#define STATS_FILE  "stats.txt"
-#define MWORDS_FILE "mistakes_words.txt"
-#define MCHARS_FILE "mistakes_chars.txt"
-#define MAX_LINE 512
-#define TOP_N 10
+// Konfigurationskonstanten
+#define STATS_FILE  "stats.txt"          // Datei für Sitzungsstatistiken
+#define MWORDS_FILE "mistakes_words.txt" // Datei für Wörterfehler
+#define MCHARS_FILE "mistakes_chars.txt" // Datei für Zeichenfehler
+#define MAX_LINE 512                     // Max. Zeilenlänge für Datei-I/O
+#define TOP_N 10                         // Anzahl der Top-Fehler zur Anzeige
 
-// Einfache Wort und Satzlisten
+// Word bank für das üben einzelner Wörter
 static const char *word_bank[] = {
     "Haus","Baum","Wasser","Feuer","Erde","Luft","Himmel","Sonne","Mond","Stern",
     "Mensch","Tier","Freund","Strasse","Auto","Zug","Bus","Fahrrad","Schule","Lehrer",
@@ -30,6 +31,7 @@ static const char *word_bank[] = {
 
 static const size_t word_bank_count = sizeof(word_bank) / sizeof(word_bank[0]);
 
+// Sentence bank für das üben ganzer Sätze
 static const char *sentence_bank[] = {
     "Der schnelle braune Fuchs springt ueber den faulen Hund.",
     "Uebung macht den Meister und regelmaessiges Training bringt Erfolg.",
@@ -54,7 +56,7 @@ static const char *sentence_bank[] = {
 };
 static const size_t sentence_bank_count = sizeof(sentence_bank) / sizeof(sentence_bank[0]);
 
-//Einfache Map für Fehler (key -> count)
+// Einfache map struct zum Zählen von Schlüsselhäufigkeiten (z.B. Fehler)
 typedef struct {
     char *key;
     long count;
@@ -65,11 +67,13 @@ typedef struct {
     size_t n;
 } Map;
 
+// Map initialisieren
 static void map_init(Map *m) {
     m->items = NULL;
     m->n = 0;
 }
 
+// Map freigeben
 static void map_free(Map *m) {
     size_t i;
     for (i = 0; i < m->n; i++) {
@@ -80,7 +84,7 @@ static void map_free(Map *m) {
     m->n = 0;
 }
 
-// Fügt key hinzu oder erhöht den Zähler, falls key schon existiert
+// Key zur Map hinzufügen/Zähler erhöhen
 static void map_add(Map *m, const char *key, long delta) {
     size_t i;
     if (key == NULL) {
@@ -119,7 +123,7 @@ static void map_add(Map *m, const char *key, long delta) {
     m->n++;
 }
 
-// Char als 1-Zeichen-String in Map zählen
+// Einzelner Char zur Map hinzufügen/Zähler erhöhen
 static void map_add_char(Map *m, char ch, long delta) {
     char buf[2];
     buf[0] = ch;
@@ -127,55 +131,42 @@ static void map_add_char(Map *m, char ch, long delta) {
     map_add(m, buf, delta);
 }
 
-// Für qsort: sortiert nach count absteigend, bei Gleichstand nach key
-// Muss folgendes Format haben > int cmp(const void *a, const void *b); 
-// Cast notwendig (innerhalb der Funktion), da diese Signatur von qsort so benötigt wird
+// Vergleichfunktion für qsort: absteigend nach count, bei Gleichstand aufsteigend nach key
 static int cmp_kc_desc(const void *a, const void *b) {
-    
     const KeyCount *A = (const KeyCount*)a;
     const KeyCount *B = (const KeyCount*)b;
-
-    if (B->count < A->count) {
-        return -1;
-    }
-    if (B->count > A->count) {
-        return 1;
-    }
+    if (B->count < A->count) return -1;
+    if (B->count > A->count) return 1;
     return strcmp(A->key, B->key);
 }
 
-// File IO für Maps: "key TAB count\n"
+// Lade Map-Daten aus Datei (Format: "key\tcount\n")
 static void load_map_from_file(Map *m, const char *filename) {
     FILE *f = fopen(filename, "r");
     if (f == NULL) {
-        return; // Datei existiert noch nicht
+        return; // File existiert nicht
     }
-
     char line[MAX_LINE];
-    while (fgets(line, sizeof(line), f) != NULL) { //fgets liest bis zum ersten \n, beim zweiten Durchlauf bis zum zweiten \n usw.
+    while (fgets(line, sizeof(line), f) != NULL) {
         char *tab = strchr(line, '\t');
-        if (tab == NULL) {
-            continue;
-        }
-        *tab = '\0';//"apple\t5\n\0" > "apple\05\n\0"
-        // key ist ab Zeilenanfang
-        {
-            char *key = line; //bis zum \0 das ersetzt wurde ""apple\0"
-            char *num = tab + 1; //+1 da ohne \0 ab dieser Stelle gelesen wird > "5\n\0"
-            long cnt = atol(num); //konvertiert "5\n\0" to Long 5 
-            if (cnt != 0) {
-                map_add(m, key, cnt);
-            }
+        if (tab == NULL) continue;
+        *tab = '\0';
+        char *key = line;
+        char *num = tab + 1;
+        long cnt = atol(num);
+        if (cnt != 0) {
+            map_add(m, key, cnt);
         }
     }
     fclose(f);
 }
 
+// Speichere Map-Daten in Datei (Format: "key\tcount\n")
 static void save_map_to_file(Map *m, const char *filename) {
-    FILE *f = fopen(filename, "w"); //Im Write Modus öffnen
+    FILE *f = fopen(filename, "w");
     size_t i;
     if (f == NULL) {
-        perror("fopen"); //built in error function, mit eigenem Text
+        perror("fopen");
         return;
     }
     for (i = 0; i < m->n; i++) {
@@ -184,23 +175,22 @@ static void save_map_to_file(Map *m, const char *filename) {
     fclose(f);
 }
 
-//Stats: CSV: date_iso,wpm,accuracy_percent,ch_count
+// Session-Statistiken anhängen (Format: "YYYY-MM-DDTHH:MM:SS,wpm,accuracy,chars\n")
 static void append_session_stats(double wpm, double accuracy, long chars) {
-    FILE *f = fopen(STATS_FILE, "a"); //Create if exists, otherwise open and append
+    FILE *f = fopen(STATS_FILE, "a");
     if (f == NULL) {
-        perror("fopen stats"); //built in error function, mit eigenem Text
+        perror("fopen stats");
         return;
     }
-    
-    time_t t = time(NULL); //time_t = Ein Typalias für einen ganzzahligen Datentyp (Integer).
-    struct tm *tm_info = localtime(&t); 
+    time_t t = time(NULL);
+    struct tm *tm_info = localtime(&t);
     char buf[64];
     strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%S", tm_info);
-    
     fprintf(f, "%s,%.2f,%.2f,%ld\n", buf, wpm, accuracy, chars);
     fclose(f);
 }
 
+// Agregierte Statistiken berechnen
 static void compute_aggregate_stats(double *avg_wpm, double *best_wpm, double *avg_acc, size_t *sessions) {
     FILE *f;
     double wpm, acc;
@@ -229,35 +219,32 @@ static void compute_aggregate_stats(double *avg_wpm, double *best_wpm, double *a
 
     if (*sessions > 0) {
         *avg_wpm /= (double)(*sessions);
-        *avg_acc  /= (double)(*sessions);
+        *avg_acc /= (double)(*sessions);
     }
 }
 
-// Zeilenende entfernen
+// Entferne Newline am ende einer Zeile
 static void trim_newline(char *s) {
-    size_t l;
-
     if (s == NULL) return;
-    l = strlen(s);
+    size_t l = strlen(s);
     if (l == 0) return;
-
     if (s[l-1] == '\n') {
         s[l-1] = '\0';
         l--;
     }
-    if (l > 0 && s[l-1] == '\r') { //weil bei Windows manchmal noch \r\n eingelsen wird
+    if (l > 0 && s[l-1] == '\r') {
         s[l-1] = '\0';
     }
 }
 
-// Zeitdifferenz in Sekunden
+// Benötigte Zeit in Sekunden zwischen zwei timevals berechnen
 static double elapsed_seconds(struct timeval start, struct timeval end) {
     double s = (double)(end.tv_sec - start.tv_sec);
-    double us = (double)(end.tv_usec - start.tv_usec) / 1000000.0; //Mikrosekunden in Sekunden
+    double us = (double)(end.tv_usec - start.tv_usec) / 1000000.0;
     return s + us;
 }
 
-// Zusammenfassen des Compare Results in einem Struct
+// Struct für vergleichsergebnisse
 typedef struct {
     size_t correct_chars;
     size_t total_chars;
@@ -265,88 +252,84 @@ typedef struct {
     size_t total_words;
 } CompareResult;
 
+// Wörter aus Text in ein Wörter-Array sammeln, Anzahl zurückgeben
+static int collect_words(const char *text, char words[][256], int max_words) {
+    int count = 0;
+    const char *p = text;
+    while (*p && count < max_words) {
+        while (*p && isspace((unsigned char)*p)) p++;
+        if (!*p) break;
+        char *w = words[count];
+        while (*p && !isspace((unsigned char)*p) && w < words[count] + 255) {
+            *w++ = *p++;
+        }
+        *w = '\0';
+        count++;
+    }
+    return count;
+}
+
+// Fehler von falschen Wortpaaren sammeln
+static void add_char_mistakes(const char *ref_word, const char *typed_word, Map *mchars) {
+    size_t rwlen = strlen(ref_word);
+    size_t twlen = strlen(typed_word);
+    size_t minw = (rwlen < twlen) ? rwlen : twlen;
+    for (size_t j = 0; j < minw; j++) {
+        if (typed_word[j] != ref_word[j]) {
+            map_add_char(mchars, typed_word[j], 1);
+        }
+    }
+    for (size_t j = rwlen; j < twlen; j++) {
+        map_add_char(mchars, typed_word[j], 1);
+    }
+}
+
+// Referenz- und eingegebenen Text vergleichen, mistake maps aktualisieren, Ergebnisse zurückgeben
 static CompareResult compare_and_update(const char *ref, const char *typed, Map *mwords, Map *mchars) {
-    CompareResult res;
-    res.correct_chars = 0;
-    res.total_chars = 0;
-    res.correct_words = 0;
-    res.total_words = 0;
-    size_t i;
-    size_t rlen, tlen, minlen;
-
-
+    CompareResult res = {0, 0, 0, 0};
     if (ref == NULL) ref = "";
     if (typed == NULL) typed = "";
-
-    rlen = strlen(ref);
-    tlen = strlen(typed);
+    size_t rlen = strlen(ref);
+    size_t tlen = strlen(typed);
     res.total_chars = rlen;
-    minlen = (rlen < tlen) ? rlen : tlen;
+    size_t minlen = (rlen < tlen) ? rlen : tlen;
 
-    // Zeichenweise vergleichen (nur für accuracy)
-    for (i = 0; i < minlen; i++) {
+    // Vergleiche Zeichen
+    for (size_t i = 0; i < minlen; i++) {
         if (typed[i] == ref[i]) {
             res.correct_chars++;
         }
     }
 
-    // Word comparison: split into words and compare each
-    res.total_words = 0;
+    // Wortvergleich
+    char ref_words[50][256];
+    char typed_words[50][256];
+    int num_ref = collect_words(ref, ref_words, 50);
+    int num_typed = collect_words(typed, typed_words, 50);
+    res.total_words = num_ref;
     res.correct_words = 0;
-    {
-        const char *rp = ref;
-        const char *tp = typed;
-        char ref_word[256];
-        char typed_word[256];
-        while (*rp) {
-            // skip spaces in ref
-            while (*rp && isspace((unsigned char)*rp)) rp++;
-            if (!*rp) break;
-            // collect ref word
-            char *rw = ref_word;
-            while (*rp && !isspace((unsigned char)*rp) && rw < ref_word + sizeof(ref_word) - 1) {
-                *rw++ = *rp++;
-            }
-            *rw = '\0';
-            res.total_words++;
-            // skip spaces in typed
-            while (*tp && isspace((unsigned char)*tp)) tp++;
-            // collect typed word
-            char *tw = typed_word;
-            while (*tp && !isspace((unsigned char)*tp) && tw < typed_word + sizeof(typed_word) - 1) {
-                *tw++ = *tp++;
-            }
-            *tw = '\0';
-            // compare
-            if (strcmp(ref_word, typed_word) == 0) {
-                res.correct_words++;
-            } else {
-                map_add(mwords, ref_word, 1);
-                // Add wrong chars from this word
-                size_t rwlen = strlen(ref_word);
-                size_t twlen = strlen(typed_word);
-                size_t minw = (rwlen < twlen) ? rwlen : twlen;
-                for (size_t j = 0; j < minw; j++) {
-                    if (typed_word[j] != ref_word[j]) {
-                        map_add_char(mchars, typed_word[j], 1);
-                    }
-                }
-                for (size_t j = rwlen; j < twlen; j++) {
-                    map_add_char(mchars, typed_word[j], 1);
-                }
-            }
+    int min_num = (num_ref < num_typed) ? num_ref : num_typed;
+    for (int k = 0; k < min_num; k++) {
+        if (strcmp(ref_words[k], typed_words[k]) == 0) {
+            res.correct_words++;
+        } else {
+            map_add(mwords, ref_words[k], 1);
+            add_char_mistakes(ref_words[k], typed_words[k], mchars);
         }
+    }
+    for (int k = min_num; k < num_ref; k++) {
+        map_add(mwords, ref_words[k], 1);
     }
 
     return res;
 }
 
-// Zufallszahl [a,b] 
+// Generiere eine Zufallszahl im Bereich [a, b]
 static int randint(int a, int b) {
     return a + rand() % (b - a + 1); // +1 damit das obere Ende b inklusiv ist (Intervall [a,b] statt [a,b))
 }
 
-// Zeile einlesen
+// Lese eine Zeile von stdin ein
 static char *read_line(void) {
     //Buffer nur innerhalb der Funktion
     char buffer[MAX_LINE];
@@ -371,7 +354,7 @@ static char *read_line(void) {
     return line;
 }
 
-// Map anzeigen (Top N)
+// Zeige die Top N Einträge aus der Map, sortiert nach Anzahl
 static void show_top_map(Map *m, int n) {
     size_t i;
     int limit;
@@ -408,7 +391,7 @@ static void show_top_map(Map *m, int n) {
     free(copy);
 }
 
-// Statistik anzeigen
+// Zeige Gesamtstatistiken und Top-Fehler an
 static void view_statistics(Map *mwords, Map *mchars) {
     double avg_wpm, best_wpm, avg_acc;
     size_t sessions;
@@ -429,7 +412,7 @@ static void view_statistics(Map *mwords, Map *mchars) {
     printf("=====================\n\n");
 }
 
-//  Practice-Session (Wörter oder Sätze)
+// Führe eine Übungssession mit Wort- oder Satzelementen durch
 static void start_practice(Map *mwords, Map *mchars) {
     char *choice;
     int mode;
@@ -567,7 +550,7 @@ static void start_practice(Map *mwords, Map *mchars) {
     }
 }
 
-// Training Mode (Mistakes-Fokus)
+// Trainingsmodus: Übe die am häufigsten falsch getippten Wörter/Buchstaben
 static void training_mode(Map *mwords, Map *mchars) {
     char *c;
     int choice;
@@ -747,7 +730,7 @@ static void training_mode(Map *mwords, Map *mchars) {
     }
 }
 
-// Main
+// Hauptprogrammschleife
 int main(void) {
     Map mistakes_words;
     Map mistakes_chars;
