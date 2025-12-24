@@ -17,7 +17,7 @@
 // Einfache Wort und Satzlisten
 static const char *word_bank[] = {
     "Haus","Baum","Wasser","Feuer","Erde","Luft","Himmel","Sonne","Mond","Stern",
-    "Mensch","Tier","Freund","Straße","Auto","Zug","Bus","Fahrrad","Schule","Lehrer",
+    "Mensch","Tier","Freund","Strasse","Auto","Zug","Bus","Fahrrad","Schule","Lehrer",
     "Schüler","Buch","Papier","Stift","Computer","Tastatur","Maus","Bildschirm","Tisch","Stuhl",
     "Fenster","Tür","Küche","Bad","Garten","Blume","Gras","Wald","Berg","Tal",
     "Fluss","See","Meer","Insel","Stadt","Dorf","Markt","Laden","Arbeit","Urlaub",
@@ -95,7 +95,7 @@ static void map_add(Map *m, const char *key, long delta) {
         }
     }
 
-    // Array um 1 Element vergrössern z.B. Erhöhung von Platz für 2 KeyCount Strukturen auf 3 KeyCount Strukturen (nur die fuer die Pointer)
+    // Array um 1 Element vergrössern z.B. Erhöhung von Platz für 2 KeyCount Strukturen auf 3 KeyCount Strukturen (nur die für die Pointer)
     KeyCount *tmp = realloc(m->items, (m->n + 1) * sizeof(KeyCount));
     if (tmp == NULL) {
         printf("Fehler bei realloc\n");
@@ -104,7 +104,7 @@ static void map_add(Map *m, const char *key, long delta) {
     //Neuer Pointer übernehmen
     m->items = tmp;
 
-    //Speicher für Kopie von key reservieren, jetzt Platz für den neuen Eintrag
+    //Speicher für Kopie von key reservieren, jetzt ist Platz für den neuen Eintrag
     {
         size_t len = strlen(key) + 1; //+1 wegen '\0'
         m->items[m->n].key = (char*)malloc(len);
@@ -283,33 +283,59 @@ static CompareResult compare_and_update(const char *ref, const char *typed, Map 
     res.total_chars = rlen;
     minlen = (rlen < tlen) ? rlen : tlen;
 
-    // Zeichenweise vergleichen
+    // Zeichenweise vergleichen (nur für accuracy)
     for (i = 0; i < minlen; i++) {
         if (typed[i] == ref[i]) {
             res.correct_chars++;
-        } else {
-            map_add_char(mchars, ref[i], 1);
         }
     }
 
-    // fehlende Zeichen im typed
-    if (tlen < rlen) {
-        for (i = tlen; i < rlen; i++) {
-            map_add_char(mchars, ref[i], 1);
+    // Word comparison: split into words and compare each
+    res.total_words = 0;
+    res.correct_words = 0;
+    {
+        const char *rp = ref;
+        const char *tp = typed;
+        char ref_word[256];
+        char typed_word[256];
+        while (*rp) {
+            // skip spaces in ref
+            while (*rp && isspace((unsigned char)*rp)) rp++;
+            if (!*rp) break;
+            // collect ref word
+            char *rw = ref_word;
+            while (*rp && !isspace((unsigned char)*rp) && rw < ref_word + sizeof(ref_word) - 1) {
+                *rw++ = *rp++;
+            }
+            *rw = '\0';
+            res.total_words++;
+            // skip spaces in typed
+            while (*tp && isspace((unsigned char)*tp)) tp++;
+            // collect typed word
+            char *tw = typed_word;
+            while (*tp && !isspace((unsigned char)*tp) && tw < typed_word + sizeof(typed_word) - 1) {
+                *tw++ = *tp++;
+            }
+            *tw = '\0';
+            // compare
+            if (strcmp(ref_word, typed_word) == 0) {
+                res.correct_words++;
+            } else {
+                map_add(mwords, ref_word, 1);
+                // Add wrong chars from this word
+                size_t rwlen = strlen(ref_word);
+                size_t twlen = strlen(typed_word);
+                size_t minw = (rwlen < twlen) ? rwlen : twlen;
+                for (size_t j = 0; j < minw; j++) {
+                    if (typed_word[j] != ref_word[j]) {
+                        map_add_char(mchars, typed_word[j], 1);
+                    }
+                }
+                for (size_t j = rwlen; j < twlen; j++) {
+                    map_add_char(mchars, typed_word[j], 1);
+                }
+            }
         }
-    } else if (tlen > rlen) {
-        for (i = rlen; i < tlen; i++) {
-            map_add_char(mchars, typed[i], 1);
-        }
-    }
-
-    // Ganzes ref vs. typed
-    res.total_words = 1;
-    if (strcmp(ref, typed) == 0) {
-        res.correct_words = 1;
-    } else {
-        res.correct_words = 0;
-        map_add(mwords, ref, 1);
     }
 
     return res;
@@ -471,7 +497,10 @@ static void start_practice(Map *mwords, Map *mchars) {
             secs = elapsed_seconds(start, end);
             total_seconds += secs;
 
-            cres = compare_and_update(ref, typed, mwords, mchars);
+            Map item_mwords;
+            map_init(&item_mwords);
+
+            cres = compare_and_update(ref, typed, &item_mwords, mchars);
             total_chars_typed += strlen(typed);
             total_correct_chars += cres.correct_chars;
             total_words += cres.total_words;
@@ -498,32 +527,20 @@ static void start_practice(Map *mwords, Map *mchars) {
                 printf("  Words correct: %zu / %zu\n", cres.correct_words, cres.total_words);
             }
 
-            if (cres.correct_chars < cres.total_chars) {
-                printf("  Mismatches (reference -> typed) at positions:\n");
-
-                size_t rlen = strlen(ref);
-                size_t tlen = strlen(typed);
-                size_t maxp = (rlen > tlen) ? rlen : tlen;
-
-                for (size_t p = 0; p < maxp; p++) {
-                    char rc = (p < rlen) ? ref[p] : '\0';
-                    char tc = (p < tlen) ? typed[p] : '\0';
-
-                    // Make non-printable or missing chars visible as '?'
-                    char r_disp = isprint((unsigned char)rc) ? rc : '?';
-                    char t_disp = isprint((unsigned char)tc) ? tc : '?';
-
-                    if (r_disp != t_disp) {
-                        printf("   pos %zu: '%c' -> '%c'\n", p + 1, r_disp, t_disp);
-                    }
-                }
-            }
-
-            else {
-                printf("  Perfect for this item!\n");
+            if (item_mwords.n > 0) {
+                printf("  Wrong words:\n");
+                show_top_map(&item_mwords, item_mwords.n);
+            } else {
+                printf("  All words correct!\n");
             }
 
             free(typed);
+
+            // Add to global mistakes
+            for (size_t j = 0; j < item_mwords.n; j++) {
+                map_add(mwords, item_mwords.items[j].key, item_mwords.items[j].count);
+            }
+            map_free(&item_mwords);
         }
 
         {
