@@ -271,17 +271,41 @@ static int collect_words(const char *text, char words[][256], int max_words) {
 
 // Fehler von falschen Wortpaaren sammeln
 static void add_char_mistakes(const char *ref_word, const char *typed_word, Map *mchars) {
-    size_t rwlen = strlen(ref_word);
-    size_t twlen = strlen(typed_word);
-    size_t minw = (rwlen < twlen) ? rwlen : twlen;
-    for (size_t j = 0; j < minw; j++) {
-        if (typed_word[j] != ref_word[j]) {
+        size_t i = 0;
+        size_t j = 0;
+        size_t rwlen = strlen(ref_word);
+        size_t twlen = strlen(typed_word);
+        while (i < rwlen && j < twlen) {
+            if (ref_word[i] == typed_word[j]) {
+                // Zeichen passt, weiter
+                i++;
+                j++;
+                continue;
+            }
+            //Fall 1: In typed_word ist ein Zeichen zu viel (Insertion), Beispiel: ref = "Haus", typed = "Haaus"
+            if (j + 1 < twlen && ref_word[i] == typed_word[j + 1]) {
+                // aktuelles typed-Zeichen ist "zu viel"
+                map_add_char(mchars, typed_word[j], 1);
+                j++; // typed aufholen
+                continue;
+            }
+            // Fall 2: In typed_word FEHLT ein Zeichen (Deletion), Beispiel: ref = "Haus", typed = "Hus"
+            if (i + 1 < rwlen && ref_word[i + 1] == typed_word[j]) {
+                // ref_word[i] wurde ausgelassen
+                map_add_char(mchars, ref_word[i], 1);
+                i++; // ref aufholen
+                continue;
+            }
+            // Fall 3: Substitution beides unterscheidet sich, aber kein klarer Insert/Delete
             map_add_char(mchars, typed_word[j], 1);
+            i++;
+            j++;
         }
-    }
-    for (size_t j = rwlen; j < twlen; j++) {
-        map_add_char(mchars, typed_word[j], 1);
-    }
+        // Restliche Zeichen in typed_word sind zu viel
+        while (j < twlen) {
+            map_add_char(mchars, typed_word[j], 1);
+            j++;
+        }
 }
 
 // Referenz- und eingegebenen Text vergleichen, mistake maps aktualisieren, Ergebnisse zurückgeben
